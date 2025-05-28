@@ -1,0 +1,139 @@
+{
+    "palletes": [
+        {
+            "name": "Default",
+            "colors:light": [
+                {
+                    "name": "Primary",
+                    "hex": "#000000"
+                },
+                {
+                    "name": "Primary:hover",
+                    "hex": "#ffffff"
+                },
+                {
+                    "name": "Secondary",
+                    "hex": "#ff0000"
+                },
+                {
+                    "name": "Secondary:hover",
+                    "hex": "#00ff00"
+                },
+                {
+                    "name": "Alert:Success",
+                    "hex": "#0000ff"
+                },
+                {
+                    "name": "Alert:Danger",
+                    "hex": "#ffff00"
+                },
+                {
+                    "name": "Alert:Info",
+                    "hex": "#00ffff"
+                },
+                {
+                    "name": "Alert:Warning",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "TextBackground",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:H1",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:H2",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:H3",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:H4",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:H5",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:H6",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:Body",
+                    "hex": "#ff00ff"
+                }
+            ],
+            "colors:dark": [
+                {
+                    "name": "Primary",
+                    "hex": "#000000"
+                },
+                {
+                    "name": "Primary:hover",
+                    "hex": "#ffffff"
+                },
+                {
+                    "name": "Secondary",
+                    "hex": "#ff0000"
+                },
+                {
+                    "name": "Secondary:hover",
+                    "hex": "#00ff00"
+                },
+                {
+                    "name": "Alert:Success",
+                    "hex": "#0000ff"
+                },
+                {
+                    "name": "Alert:Danger",
+                    "hex": "#ffff00"
+                },
+                {
+                    "name": "Alert:Info",
+                    "hex": "#00ffff"
+                },
+                {
+                    "name": "Alert:Warning",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "TextBackground",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:H1",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:H2",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:H3",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:H4",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:H5",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:H6",
+                    "hex": "#ff00ff"
+                },
+                {
+                    "name": "Text:Body",
+                    "hex": "#ff00ff"
+                }
+            ]
+        }
+    ]
+}
