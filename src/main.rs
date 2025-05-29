@@ -1,20 +1,13 @@
-use cacao::appkit::menu::menu::Menu;
-use cacao::appkit::window::Window;
-use cacao::appkit::{App, AppDelegate};
+mod app;
 
-#[derive(Default)]
-struct BasicApp {
-    window: Window,
-}
-
-impl AppDelegate for BasicApp {
-    fn did_finish_launching(&self) {
-        self.window.set_minimum_content_size(400., 400.);
-        self.window.set_title("Hello World!");
-        self.window.show();
-    }
-}
+use app::*;
+use leptos::prelude::*;
 
 fn main() {
-    App::new("com.hello.world", BasicApp::default()).run();
+    console_error_panic_hook::set_once();
+    mount_to_body(|| {
+        view! {
+            <App/>
+        }
+    })
 }
