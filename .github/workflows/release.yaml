@@ -1,0 +1,244 @@
+# ./target/release/bundle/macos/ctf-rs.app
+name: Build & Draft Releases
+
+on:
+    push:
+        # branches to consider in the event; optional, defaults to all
+        tags:
+            - "v[0-9]+.[0-9]+.[0-9]+"
+
+    # pull_request event is required only for autolabeler
+    pull_request:
+        # Only following types are handled by the action, but one can default to all as well
+        types: [opened, reopened, synchronize]
+    # pull_request_target event is required for autolabeler to support PRs from forks
+    # pull_request_target:
+    #   types: [opened, reopened, synchronize]
+
+permissions:
+    contents: read
+
+jobs:
+    build:
+        permissions:
+            contents: write
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - platform: "macos-latest"
+                      args: "--target universal-apple-darwin" # Universal binary
+                    - platform: "ubuntu-22.04"
+                      args: ""
+                    - platform: "windows-latest"
+                      args: ""
+        runs-on: ${{ matrix.platform }}
+        needs: prepare
+        env:
+            APPLE_ID: ${{ secrets.APPLE_ID }}
+            APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Install latest nightly
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  components: rustfmt, clippy
+                  toolchain: nightly
+                  override: true
+                  targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+            - name: cache dependencies
+              uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: "./src-tauri -> target"
+
+            - name: Run cargo check
+              uses: actions-rs/cargo@v1
+              with:
+                  command: check
+
+            - name: (macOS) Install dependencies
+              run: |
+                  brew install cmake
+                  brew install ninja
+                  brew install openssl
+                  brew install qt
+
+            - name: (macOS) Build and test
+              if: matrix.platform == 'macos-latest'
+              run: |
+                  curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+                  rustup target add aarch64-apple-darwin
+                  rustup target add x86_64-apple-darwin
+                  rustup target add wasm32-unknown-unknown
+                  cargo install cargo-tauri
+                  cargo tauri build --bundles app
+                  cargo tauri build --bundles dmg
+
+            - name: (macOS) Import Apple Developer Certificate
+              if: matrix.platform == 'macos-latest'
+              env:
+                  APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+                  APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+                  KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+              run: |
+                  echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
+                  security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+                  security default-keychain -s build.keychain
+                  security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+                  security set-keychain-settings -t 3600 -u build.keychain
+                  security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+                  security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+                  security find-identity -v -p codesigning build.keychain
+
+            - name: (macOS) Verify Certificate
+              if: matrix.platform == 'macos-latest'
+              run: |
+                  CERT_INFO=$(security find-identity -v -p codesigning build.keychain | grep "Apple Development")
+                  CERT_ID=$(echo "$CERT_INFO" | awk -F'"' '{print $2}')
+                  echo "CERT_ID=$CERT_ID" >> $GITHUB_ENV
+                  echo "Certificate imported."
+
+            - name: (macOS) Sign and Release
+              uses: tauri-apps/tauri-action@v0
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }} # Get VIA openssl base64 -in /path/to/certificate.p12 -out certificate-base64.txt
+                  APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+                  APPLE_SIGNING_IDENTITY: ${{ env.CERT_ID }}
+                  APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+                  APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+                  APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
+              with:
+                  args: ${{ matrix.args }}
+
+            - name: (Linux) Install dependencies
+              if: matrix.platform == 'ubuntu-latest'
+              env:
+                  TAURI_SIGNING_RPM_KEY: ${{ secrets.GPG_KEY }}
+                  TAURI_SIGNING_RPM_KEY_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+                  AUR_PKGBUILD: |
+                      pkgname=<pkgname>
+                      pkgver=1.0.0
+                      pkgrel=1
+                      pkgdesc="Description of your app"
+                      arch=('x86_64' 'aarch64')
+                      url="https://github.com/<user>/<project>"
+                      license=('MIT')
+                      depends=('cairo' 'desktop-file-utils' 'gdk-pixbuf2' 'glib2' 'gtk3' 'hicolor-icon-theme' 'libsoup' 'pango' 'webkit2gtk-4.1')
+                      options=('!strip' '!emptydirs')
+                      install=${pkgname}.install
+                      source_x86_64=("${url}/releases/download/v${pkgver}/appname_${pkgver}_amd64.deb")
+                      source_aarch64=("${url}/releases/download/v${pkgver}/appname_"${pkgver}_arm64.deb")
+                  SNAPCRAFT_CONFIG: |
+                      name: appname
+                      base: core22
+                      version: '0.1.0'
+                      summary: Your summary # 79 char long summary
+                      description: |
+                        Your description
+
+                      grade: stable
+                      confinement: strict
+
+                      layout:
+                        /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.1:
+                          bind: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.1
+
+                      apps:
+                        appname:
+                          command: usr/bin/appname
+                          desktop: usr/share/applications/appname.desktop
+                          extensions: [gnome]
+                          #plugs:
+                          #  - network
+                          # Add whatever plugs you need here, see https://snapcraft.io/docs/snapcraft-interfaces for more info.
+                          # The gnome extension already includes [ desktop, desktop-legacy, gsettings, opengl, wayland, x11, mount-observe, calendar-service ]
+
+                      package-repositories:
+                        - type: apt
+                          components: [main]
+                          suites: [noble]
+                          key-id: 78E1918602959B9C59103100F1831DDAFC42E99D
+                          url: http://ppa.launchpad.net/snappy-dev/snapcraft-daily/ubuntu
+
+                      parts:
+                        build-app:
+                          plugin: dump
+                          build-snaps:
+                            - node/20/stable
+                            - rustup/latest/stable
+                          build-packages:
+                            - libwebkit2gtk-4.1-dev
+                            - build-essential
+                            - curl
+                            - wget
+                            - file
+                            - libxdo-dev
+                            - libssl-dev
+                            - libayatana-appindicator3-dev
+                            - librsvg2-dev
+                            - dpkg
+                          stage-packages:
+                            - libwebkit2gtk-4.1-0
+                            - libayatana-appindicator3-1
+                          source: .
+                          override-build: |
+                            set -eu
+                            npm install
+                            npm run tauri build -- --bundles deb
+                            dpkg -x src-tauri/target/release/bundle/deb/*.deb $SNAPCRAFT_PART_INSTALL/
+                            sed -i -e "s|Icon=appname|Icon=/usr/share/icons/hicolor/32x32/apps/appname.png|g" $SNAPCRAFT_PART_INSTALL/usr/share/applications/appname.desktop
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y cmake ninja-build libssl-dev qt6-base-dev
+
+            - name: (Linux) Verify Signature
+              if: matrix.platform == 'ubuntu-latest'
+              env:
+                  RPM_MACROS: |
+                      %_signature gpg
+                      %_gpg_path /home/johndoe/.gnupg
+                      %_gpg_name Tauri-App
+                      %_gpgbin /usr/bin/gpg2
+                      %__gpg_sign_cmd %{__gpg} \
+                          gpg --force-v3-sigs --digest-algo=sha1 --batch --no-verbose --no-armor \
+                          --passphrase-fd 3 --no-secmem-warning -u "%{_gpg_name}" \
+                          -sbo %{__signature_filename} %{__plaintext_filename}
+              run: |
+                  gpg --export -a 'Tauri-App' > RPM-GPG-KEY-Tauri-App
+                  sudo rpm --import RPM-GPG-KEY-Tauri-App
+                  rpm  -v --checksig tauri-app-0.0.0-1.x86_64.rpm
+
+            - name: (Windows) Install dependenciesv
+              run: |
+                  choco install -y cmake ninja openssl qt6
+
+            - name: (Windows) Build and test
+              run: |
+                  $env:TAURI_FIPS_COMPLIANT="true"
+                  cargo tauri build
+    update_release_draft:
+        permissions:
+            # write permission is required to create a github release
+            contents: write
+            # write permission is required for autolabeler
+            # otherwise, read permission is required at least
+            pull-requests: write
+        runs-on: ubuntu-latest
+        steps:
+            # (Optional) GitHub Enterprise requires GHE_HOST variable set
+            #- name: Set GHE_HOST
+            #  run: |
+            #    echo "GHE_HOST=${GITHUB_SERVER_URL##https:\/\/}" >> $GITHUB_ENV
+
+            # Drafts your next Release notes as Pull Requests are merged into "master"
+            - uses: release-drafter/release-drafter@v6
+              # (Optional) specify config name to use, relative to .github/. Default: release-drafter.yml
+              # with:
+              #   config-name: my-config.yml
+              #   disable-autolabeler: true
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
