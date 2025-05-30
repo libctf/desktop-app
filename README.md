@@ -21,7 +21,9 @@ This template should help get you started developing with Tauri and Leptos.
 
 ## TODOs
 
-- [ ] Implement Clipboard Plugin functionality
+- [ ] Implement landing page
+- [ ] Implement splash screen
+- [x] Implement Clipboard Plugin functionality
 - [ ] Explore/Implement Deeplinking Plugin functionality
 - [ ] Implement Filesystem Plugin functionality
 - [ ] Implement Dialog Plugin functionality
