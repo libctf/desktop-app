@@ -1,0 +1,71 @@
+{
+    "$schema": "https://schema.tauri.app/config/2",
+    "productName": "ctf-rs",
+    "version": "0.1.0",
+    "identifier": "com.libctf.ctf-rs.dev",
+    "build": {
+        "beforeDevCommand": "trunk serve",
+        "devUrl": "http://localhost:1420",
+        "beforeBuildCommand": "trunk build",
+        "frontendDist": "../dist"
+    },
+    "app": {
+        "withGlobalTauri": true,
+        "windows": [
+            {
+                "title": "CTF.rs",
+                "width": 800,
+                "height": 600,
+                "resizable": true,
+                "fullscreen": false
+            }
+        ],
+        "security": {
+            "csp": null
+        }
+    },
+    "bundle": {
+        "active": true,
+        "targets": "all",
+        //"licenseFile": "../LICENSE", // put the path to the license file here
+        "license": "AGPL-3.0-or-later", // add the license here
+        "icon": [
+            "icons/32x32.png",
+            "icons/128x128.png",
+            "icons/128x128@2x.png",
+            "icons/icon.icns",
+            "icons/icon.ico"
+        ],
+        "linux": {
+            "deb": {
+                "files": {
+                    "/usr/share/README.md": "../README.md", // copies the README.md file to /usr/share/README.md
+                    "/usr/share/assets": "../assets/" // copies the entire assets directory to /usr/share/assets
+                }
+            },
+            "appimage": {
+                "files": {
+                    "/usr/share/README.md": "../README.md", // copies the ../README.md file to <appimage>/usr/share/README.md
+                    "/usr/assets": "../assets/" // copies the entire ../assets directory to <appimage>/usr/assets
+                }
+            },
+            "rpm": {
+                "epoch": 0, // Defines weighted dependencies based on version numbers.
+                "files": {}, // Specifies which files to include in the package.
+
+
+                "release": "1",
+                // add the script here
+                "preInstallScript": "{{CWD}}/.scripts/rpm/install/pre.sh",
+                "postInstallScript": "{{CWD}}/.scripts/rpm/install/post.sh",
+                "preRemoveScript": "{{CWD}}/.scripts/rpm/remove/pre.sh",
+                "postRemoveScript": "{{CWD}}/.scripts/rpm/remove/post.sh",
+                "conflicts": ["oldLib.rpm"], // Prevents the installation of the package if it conflicts with another package. For example, if you update an RPM package that your app depends on and the new version is incompatible with your app
+                "depends": ["newLib.rpm"], // Lists the RPM dependencies that your application needs to run.
+                "obsoletes": ["veryoldLib.rpm"], // Lists the RPM dependencies that your application obsoletes
+                "provides": ["coolLib.rpm"], // Lists the RPM dependencies that your application provides
+                "desktopTemplate": "{{CWD}}/.desktop-template.desktop" // Adds a custom desktop file to the package
+            }
+        }
+    }
+}

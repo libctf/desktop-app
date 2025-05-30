@@ -5,12 +5,16 @@ version = "0.1.0"
 edition = "2024"
 license = "AGPL-3.0-or-later"
 readme = "README.md"
-homepage = "https://github.com/libctf/frontend"
+homepage = "https://github.com/libctf/desk"
 keywords = ["tauri", "ctf", "ui", "desktop", "leptos"]
 categories = ["web-programming::http-client", "gui"]
 
+[build-dependencies]
+tauri-build = { version = "2.0.0", features = ["config-json5"] }
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
+tauri = { version = "2.0.0", features = ["config-json5"] }
 leptos = { version = "0.7", features = ["csr"] }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
@@ -18,11 +22,9 @@ js-sys = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde-wasm-bindgen = "0.6"
 console_error_panic_hook = "0.1.7"
-glib = "0.20.0"
 
-[dev-dependencies]
-glib = "0.20.0"
-
+# [patch.crates-io]
+# glib = "0.20.0" # Force all glib dependencies to use secure version
 
 [workspace]
 members = ["src-tauri"]
