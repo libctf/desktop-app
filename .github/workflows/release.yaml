@@ -34,9 +34,6 @@ jobs:
                       args: ""
         runs-on: ${{ matrix.platform }}
         needs: prepare
-        env:
-            APPLE_ID: ${{ secrets.APPLE_ID }}
-            APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
@@ -53,6 +50,15 @@ jobs:
               uses: Swatinem/rust-cache@v2
               with:
                   workspaces: "./src-tauri -> target"
+
+            - name: Load secret
+              uses: 1password/load-secrets-action@v2
+              with:
+                  # Export loaded secrets as environment variables
+                  export-env: true
+                  env:
+                      OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+                      SECRET: op://app-cicd/hello-world/secret
 
             - name: Run cargo check
               uses: actions-rs/cargo@v1
@@ -111,6 +117,8 @@ jobs:
                   APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
                   APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
                   APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
+                  APPLE_ID: ${{ secrets.APPLE_ID }}
+                  APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
               with:
                   args: ${{ matrix.args }}
 
