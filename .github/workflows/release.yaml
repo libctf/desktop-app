@@ -51,14 +51,25 @@ jobs:
               with:
                   workspaces: "./src-tauri -> target"
 
-            - name: Load secret
+            - name: Load secrets
               uses: 1password/load-secrets-action@v2
               with:
                   # Export loaded secrets as environment variables
                   export-env: true
-                  env:
-                      OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-                      SECRET: op://app-cicd/hello-world/secret
+              env:
+                  OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+                  SECRET: op://ctf-rs/desktop-app/secret
+                  KEYCHAIN_PASSWORD: op://ctf-rs/ios-dev/keychain-password
+                  APPLE_CERTIFICATE_PASSWORD: op://ctf-rs/ios-dev/certificate-password
+                  APPLE_CERTIFICATE: op://ctf-rs/ios-dev/certificate # Get VIA openssl base64 -in /path/to/certificate.p12 -out certificate-base64.txt
+                  APPLE_ID: op://ctf-rs/ios-dev/id
+                  APPLE_ID_PASSWORD: op://ctf-rs/ios-dev/password
+                  APPLE_API_ISSUER: op://ctf-rs/ios-api/issuer
+                  APPLE_API_KEY: op://ctf-rs/ios-api/key
+                  APPLE_API_KEY_PATH: op://ctf-rs/ios-api/keypath
+                  APPLE_SIGNING_IDENTITY: op://ctf-rs/ios-api/certificate
+                  TAURI_SIGNING_RPM_KEY: op://ctf-rs/desktop-app/tauri-gpg-key
+                  TAURI_SIGNING_RPM_KEY_PASSPHRASE: op://ctf-rs/desktop-app/tauri-gpg-pass
 
             - name: Run cargo check
               uses: actions-rs/cargo@v1
@@ -85,10 +96,6 @@ jobs:
 
             - name: (macOS) Import Apple Developer Certificate
               if: matrix.platform == 'macos-latest'
-              env:
-                  APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-                  APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-                  KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
               run: |
                   echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
                   security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
@@ -111,22 +118,12 @@ jobs:
               uses: tauri-apps/tauri-action@v0
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }} # Get VIA openssl base64 -in /path/to/certificate.p12 -out certificate-base64.txt
-                  APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-                  APPLE_SIGNING_IDENTITY: ${{ env.CERT_ID }}
-                  APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-                  APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
-                  APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
-                  APPLE_ID: ${{ secrets.APPLE_ID }}
-                  APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
               with:
                   args: ${{ matrix.args }}
 
             - name: (Linux) Install dependencies
               if: matrix.platform == 'ubuntu-latest'
               env:
-                  TAURI_SIGNING_RPM_KEY: ${{ secrets.GPG_KEY }}
-                  TAURI_SIGNING_RPM_KEY_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
                   AUR_PKGBUILD: |
                       pkgname=<pkgname>
                       pkgver=1.0.0
